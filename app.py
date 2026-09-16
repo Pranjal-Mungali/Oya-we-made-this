@@ -8,7 +8,8 @@ Converts 10m Sentinel-2 imagery to <4m equivalent resolution using a
 deep Residual CNN with PixelShuffle upsampling and Monte Carlo Dropout
 for pixel-level epistemic uncertainty quantification.
 
-Designed for deployment on Hugging Face Spaces (ZERO-GPU / CPU).
+Designed for deployment on Hugging Face Spaces and local execution:
+    python app.py
 """
 
 import os
@@ -19,12 +20,12 @@ import numpy as np
 import torch
 import gradio as gr
 
-# Ensure project root is in path (works in both local dev and HF Spaces)
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+# Ensure root directory is always on sys.path
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-# Import from co-located app modules or root
+# Import model & preprocessing utilities (supports both root and package execution)
 try:
     from model import ResidualSR, load_model
     from utils import (
@@ -45,6 +46,7 @@ except ImportError:
         build_comparison_figure,
         compute_metrics,
     )
+
 from src.dataset import Sentinel2SRDataset
 
 
@@ -145,9 +147,8 @@ def run_super_resolution(
     """
     model = get_model()
 
-    # 1. Determine and preprocess input ─────────────────────────────────────
+    # 1. Determine and preprocess input
     if upload_img is not None:
-        # Uploaded file: full preprocessing pipeline (bit-depth, bands, resize)
         lr_np = load_input_image(
             file_path=upload_img,
             patch_size=PATCH_SIZE,
@@ -155,14 +156,13 @@ def run_super_resolution(
         )
         source_label = os.path.basename(upload_img)
     else:
-        # Preset benchmark sample
         lr_np = SAMPLES[sample_choice].copy()
         source_label = sample_choice
 
-    # 2. Build LR input tensor ───────────────────────────────────────────────
+    # 2. Build LR input tensor
     lr_tensor = numpy_to_tensor(lr_np, device=DEVICE)    # (1, 4, 64, 64)
 
-    # 3. Monte Carlo Dropout Inference (15 passes) ────────────────────────────
+    # 3. Monte Carlo Dropout Inference (15 passes)
     t_start = time.time()
     sr_tensor, unc_tensor = model.monte_carlo_inference(
         lr_tensor,
@@ -171,18 +171,18 @@ def run_super_resolution(
     )
     duration = time.time() - t_start
 
-    # 4. Extract numpy arrays ─────────────────────────────────────────────────
+    # 4. Extract numpy arrays
     sr_np  = sr_tensor.squeeze(0).detach().cpu().numpy()     # (4, 128, 128)
     unc_np = unc_tensor.squeeze(0).detach().cpu().numpy()    # (4, 128, 128)
 
     spatial_unc = float(np.mean(unc_np))
 
-    # 5. Visual conversions ───────────────────────────────────────────────────
+    # 5. Visual conversions
     lr_rgb  = (tensor_to_rgb(lr_np,  gamma=1.2) * 255).astype(np.uint8)
     sr_rgb  = (tensor_to_rgb(sr_np,  gamma=1.2) * 255).astype(np.uint8)
     unc_rgb = render_uncertainty_heatmap(unc_np, cmap="inferno")
 
-    # 6. Build side-by-side comparison panel ─────────────────────────────────
+    # 6. Build side-by-side comparison panel
     comp = build_comparison_figure(
         lr_rgb=lr_rgb,
         sr_rgb=sr_rgb,
@@ -195,7 +195,7 @@ def run_super_resolution(
         duration=duration,
     )
 
-    # 7. Metrics text ─────────────────────────────────────────────────────────
+    # 7. Metrics text
     metrics_md = f"""
 ### Inference Report
 
