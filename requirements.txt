@@ -1,22 +1,31 @@
-# Core & Deep Learning
+# BhuVistaar — Smart India Hackathon 2026
+# Team: The Outliers
+# Sentinel-2 Super Resolution with Monte Carlo Dropout Uncertainty Quantification
+
+# Core ML / Deep Learning
 torch>=2.0.0
 torchvision>=0.15.0
 numpy>=1.24.0
 scipy>=1.10.0
 
-# Geospatial & Remote Sensing
+# Satellite / Geospatial Imagery I/O
 rasterio>=1.3.0
-geopandas>=0.13.0
-scikit-image>=0.20.0
-opencv-python-headless>=4.7.0
+tifffile>=2023.1.0
 Pillow>=9.5.0
+
+# Image Quality Metrics
+scikit-image>=0.20.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Web Application (Gradio — Hugging Face Spaces compatible)
+gradio>=4.0.0
 
 # Data & Utilities
 pandas>=2.0.0
 tqdm>=4.65.0
 pyyaml>=6.0
-matplotlib>=3.7.0
 
-# App & Experimentation
-streamlit>=1.25.0
-jupyterlab>=4.0.0
+# Training & Experimentation (optional — not needed for HF Spaces inference)
+# jupyterlab>=4.0.0
